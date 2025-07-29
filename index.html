@@ -645,8 +645,26 @@
             color: #28a745;
         }
         
-        .sync-status.error {
-            color: #dc3545;
+        .workout-instructions {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            border: 2px solid #667eea;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .instructions-title {
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        
+        .instructions-text {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #495057;
         }
         
         @media (max-width: 480px) {
@@ -796,7 +814,7 @@
             <div id="workout" class="section active">
                 <div class="body-weight-input">
                     <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #1976d2;">Today's Body Weight:</label>
-                    <input type="number" id="body-weight" placeholder="180" step="0.1"> lbs
+                    <input type="number" id="body-weight" placeholder="180" step="0.1" onkeypress="handleBodyWeightEnter(event)"> lbs
                 </div>
                 
                 <div class="timer" id="rest-timer">
@@ -881,6 +899,7 @@
             currentWorkout: null,
             timerInterval: null,
             timerSeconds: 0,
+            alertShown: false,
             currentCalendarDate: new Date(),
             workoutSchedule: {},
             startDate: new Date()
@@ -903,6 +922,7 @@
         window.updateHistoryDisplay = updateHistoryDisplay;
         window.updateCalendarDisplay = updateCalendarDisplay;
         window.changeMonth = changeMonth;
+        window.handleBodyWeightEnter = handleBodyWeightEnter;
 
         // Authentication functions
         function showAuthScreen() {
@@ -1166,7 +1186,9 @@
         }
 
         function generateExerciseBlocks(day) {
-            return appData.workoutDays[day].map(exerciseKey => {
+            const instructions = getWorkoutInstructions(day);
+            
+            const exerciseBlocks = appData.workoutDays[day].map(exerciseKey => {
                 const exercise = appData.exercises[exerciseKey];
                 const reps = exerciseKey === 'deadlift' ? '1x5' : '5x5';
                 const setCount = exerciseKey === 'deadlift' ? 1 : 5;
@@ -1192,6 +1214,62 @@
                     </div>
                 `;
             }).join('');
+            
+            return instructions + exerciseBlocks;
+        }
+
+        function getWorkoutInstructions(day) {
+            if (day === 'A') {
+                return `
+                    <div class="workout-instructions">
+                        <div class="instructions-title">Workout A Instructions</div>
+                        <div class="instructions-text">
+                            Focus on proper form with controlled movements. Squat down until your hip crease is below your knee cap, then drive up through your heels. 
+                            Keep your chest up and core tight throughout all exercises.
+                        </div>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div class="workout-instructions">
+                        <div class="instructions-title">Workout B Instructions</div>
+                        <div class="instructions-text">
+                            Press the bar straight up overhead without arching your back excessively. For deadlifts, keep the bar close to your body and drive through your heels. 
+                            Remember: deadlifts are only 1 set of 5 reps, so make them count!
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function handleBodyWeightEnter(event) {
+            if (event.key === 'Enter') {
+                const bodyWeightInput = document.getElementById('body-weight');
+                const value = parseFloat(bodyWeightInput.value);
+                
+                if (value && value > 0) {
+                    bodyWeightInput.blur(); // Remove focus from input
+                    // Visual feedback that the weight was registered
+                    bodyWeightInput.style.background = '#d4edda';
+                    bodyWeightInput.style.borderColor = '#28a745';
+                    
+                    setTimeout(() => {
+                        bodyWeightInput.style.background = 'transparent';
+                        bodyWeightInput.style.borderColor = '#2196f3';
+                    }, 1000);
+                    
+                    console.log('Body weight registered:', value);
+                } else {
+                    // Show error feedback
+                    bodyWeightInput.style.background = '#f8d7da';
+                    bodyWeightInput.style.borderColor = '#dc3545';
+                    
+                    setTimeout(() => {
+                        bodyWeightInput.style.background = 'transparent';
+                        bodyWeightInput.style.borderColor = '#2196f3';
+                    }, 1000);
+                }
+            }
         }
 
         async function switchToDay(day) {
@@ -1425,10 +1503,14 @@
                 
                 if (appData.timerSeconds <= 0) {
                     stopTimer(); // Stop timer BEFORE showing alert
-                    // Use setTimeout to prevent the alert from interfering with timer cleanup
-                    setTimeout(() => {
-                        alert('Rest period complete! 🔔');
-                    }, 100);
+                    // Use a flag to prevent multiple alerts
+                    if (!appData.alertShown) {
+                        appData.alertShown = true;
+                        setTimeout(() => {
+                            alert('Rest period complete! 🔔');
+                            appData.alertShown = false; // Reset flag after alert
+                        }, 100);
+                    }
                 }
             }, 1000);
         }
@@ -1448,6 +1530,7 @@
                 appData.timerInterval = null;
             }
             appData.timerSeconds = 0;
+            appData.alertShown = false; // Reset alert flag
             const timer = document.getElementById('rest-timer');
             if (timer) {
                 timer.classList.remove('active');

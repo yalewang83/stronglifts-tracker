@@ -913,7 +913,6 @@
         window.updateWorkoutDisplay = updateWorkoutDisplay;
         window.switchToDay = switchToDay;
         window.toggleSet = toggleSet;
-        window.completeExercise = completeExercise;
         window.failExercise = failExercise;
         window.completeWorkout = completeWorkout;
         window.skipWorkoutDay = skipWorkoutDay;
@@ -1288,49 +1287,6 @@
             } else {
                 setBtn.classList.add('completed');
                 setBtn.textContent = '✓';
-                
-                // Check if all sets for this exercise are completed
-                const exercise = appData.exercises[exerciseKey];
-                const setCount = exerciseKey === 'deadlift' ? 1 : 5;
-                let allSetsCompleted = true;
-                
-                for (let i = 0; i < setCount; i++) {
-                    const checkBtn = document.getElementById(`set-${exerciseKey}-${i}`);
-                    if (!checkBtn || !checkBtn.classList.contains('completed')) {
-                        allSetsCompleted = false;
-                        break;
-                    }
-                }
-                
-                // If all sets completed, progress weight automatically
-                if (allSetsCompleted) {
-                    if (exerciseKey === 'squat' || exerciseKey === 'deadlift') {
-                        exercise.weight += 10;
-                    } else {
-                        exercise.weight += 5;
-                    }
-                    
-                    exercise.failed = 0;
-                    
-                    // Update weight display immediately
-                    const weightDisplay = setBtn.closest('.exercise-block').querySelector('.exercise-weight');
-                    if (weightDisplay) {
-                        weightDisplay.textContent = `${exercise.weight} lbs`;
-                        // Flash the new weight
-                        weightDisplay.style.background = '#28a745';
-                        weightDisplay.style.color = 'white';
-                        weightDisplay.style.borderRadius = '4px';
-                        weightDisplay.style.padding = '2px 6px';
-                        setTimeout(() => {
-                            weightDisplay.style.background = 'transparent';
-                            weightDisplay.style.color = '#667eea';
-                            weightDisplay.style.padding = '0';
-                        }, 1000);
-                    }
-                    
-                    saveDataToFirebase();
-                    startTimer(90); // Start rest timer when exercise completed
-                }
             }
             
             checkWorkoutCompletion();
@@ -1461,16 +1417,48 @@
             let completedSets = 0;
             let totalSets = 0;
             
+            // Progress weights for exercises where all sets are completed
             currentExercises.forEach(exerciseKey => {
                 const setCount = exerciseKey === 'deadlift' ? 1 : 5;
                 totalSets += setCount;
+                let exerciseCompleted = true;
                 
                 for (let i = 0; i < setCount; i++) {
                     const setBtn = document.getElementById(`set-${exerciseKey}-${i}`);
                     if (setBtn && (setBtn.classList.contains('completed') || setBtn.classList.contains('failed'))) {
                         completedSets++;
                     } else {
+                        exerciseCompleted = false;
                         isFullyCompleted = false;
+                    }
+                }
+                
+                // Progress weight only if ALL sets of this exercise are completed successfully
+                if (exerciseCompleted) {
+                    let allSetsSuccessful = true;
+                    for (let i = 0; i < setCount; i++) {
+                        const setBtn = document.getElementById(`set-${exerciseKey}-${i}`);
+                        if (setBtn && setBtn.classList.contains('failed')) {
+                            allSetsSuccessful = false;
+                            break;
+                        }
+                    }
+                    
+                    if (allSetsSuccessful) {
+                        // Progress the weight
+                        if (exerciseKey === 'squat' || exerciseKey === 'deadlift') {
+                            appData.exercises[exerciseKey].weight += 10;
+                        } else {
+                            appData.exercises[exerciseKey].weight += 5;
+                        }
+                        appData.exercises[exerciseKey].failed = 0;
+                    } else {
+                        // Exercise completed but with failures - handle deload logic
+                        appData.exercises[exerciseKey].failed++;
+                        if (appData.exercises[exerciseKey].failed >= 3) {
+                            appData.exercises[exerciseKey].weight = Math.max(45, Math.round(appData.exercises[exerciseKey].weight * 0.9));
+                            appData.exercises[exerciseKey].failed = 0;
+                        }
                     }
                 }
             });
@@ -1513,9 +1501,9 @@
             updateCalendarDisplay();
             
             if (isFullyCompleted) {
-                alert('Workout completed! Great job! 💪');
+                alert('Workout completed! Weights have been increased for next time! 💪');
             } else {
-                alert(`Partial workout logged! You completed ${completedSets}/${totalSets} sets. Better than nothing! 💪`);
+                alert(`Partial workout logged! You completed ${completedSets}/${totalSets} sets. Weights updated where applicable! 💪`);
             }
             
             document.getElementById('body-weight').value = '';

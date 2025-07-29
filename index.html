@@ -1278,15 +1278,24 @@
             const setBtn = document.getElementById(`set-${exerciseKey}-${setIndex}`);
             
             if (setBtn.classList.contains('completed')) {
+                // If clicking a completed set, toggle it back to incomplete
                 setBtn.classList.remove('completed');
                 setBtn.textContent = '5';
             } else if (setBtn.classList.contains('failed')) {
+                // If clicking a failed set, toggle it to completed
                 setBtn.classList.remove('failed');
                 setBtn.classList.add('completed');
                 setBtn.textContent = '✓';
+                
+                // Start rest timer for successful set completion
+                startTimer(90); // 90 seconds rest between sets
             } else {
+                // If clicking an incomplete set, mark it as completed
                 setBtn.classList.add('completed');
                 setBtn.textContent = '✓';
+                
+                // Start rest timer for successful set completion
+                startTimer(90); // 90 seconds rest between sets
             }
             
             checkWorkoutCompletion();
@@ -1346,26 +1355,34 @@
         }
 
         async function failExercise(exerciseKey) {
-            const exercise = appData.exercises[exerciseKey];
-            exercise.failed++;
-            
+            // Find the next incomplete set and mark it as failed
             const setCount = exerciseKey === 'deadlift' ? 1 : 5;
-            const lastSetBtn = document.getElementById(`set-${exerciseKey}-${setCount - 1}`);
-            lastSetBtn.classList.remove('completed');
-            lastSetBtn.classList.add('failed');
-            lastSetBtn.textContent = 'X';
+            let setMarked = false;
             
-            if (exercise.failed >= 3) {
-                exercise.weight = Math.max(45, Math.round(exercise.weight * 0.9));
-                exercise.failed = 0;
-                alert(`${exercise.name} deloaded to ${exercise.weight} lbs`);
+            for (let i = 0; i < setCount; i++) {
+                const setBtn = document.getElementById(`set-${exerciseKey}-${i}`);
+                if (setBtn && !setBtn.classList.contains('completed') && !setBtn.classList.contains('failed')) {
+                    setBtn.classList.add('failed');
+                    setBtn.textContent = 'X';
+                    setMarked = true;
+                    break;
+                }
             }
             
-            updateWorkoutDisplay();
-            await saveDataToFirebase();
+            // If no incomplete sets found, mark the last set as failed
+            if (!setMarked && setCount > 0) {
+                const lastSetBtn = document.getElementById(`set-${exerciseKey}-${setCount - 1}`);
+                if (lastSetBtn) {
+                    lastSetBtn.classList.remove('completed');
+                    lastSetBtn.classList.add('failed');
+                    lastSetBtn.textContent = 'X';
+                }
+            }
+            
             checkWorkoutCompletion();
             
-            startTimer(180);
+            // Start longer rest timer for failed sets
+            startTimer(180); // 3 minutes for failed sets
         }
 
         function checkWorkoutCompletion() {

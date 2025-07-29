@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StrongLifts 5x5 Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .header .subtitle {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .user-info {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+        
+        .user-info.visible {
+            display: flex;
+        }
+        
+        .user-details {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .user-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+        
+        .user-name {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .auth-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        
+        .auth-screen.hidden {
+            display: none;
+        }
+        
+        .auth-logo {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .auth-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 10px;
+        }
+        
+        .auth-subtitle {
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 40px;
+            font-size: 16px;
+        }
+        
+        .google-signin-btn {
+            background: white;
+            color: #333;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: transform 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .google-signin-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .google-logo {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .loading-screen {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            flex-direction: column;
+            color: white;
+        }
+        
+        .loading-screen.visible {
+            display: flex;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .app-content {
+            display: none;
+        }
+        
+        .app-content.visible {
+            display: block;
+        }
+        
+        .nav {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .nav-btn {
+            flex: 1;
+            padding: 15px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .nav-btn:not(.active):hover {
+            background: #e9ecef;
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .section {
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
+        .setup-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #495057;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .workout-day {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .workout-day.active-day {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea10 0%, #764ba210 100%);
+        }
+        
+        .day-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .day-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #667eea;
+        }
+        
+        .day-exercises {
+            font-size: 14px;
+            color: #6c757d;
+        }
+        
+        .exercise-block {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .exercise-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .exercise-name {
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .exercise-weight {
+            font-weight: 700;
+            color: #667eea;
+            font-size: 18px;
+        }
+        
+        .sets-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .set-btn {
+            aspect-ratio: 1;
+            border: 2px solid #dee2e6;
+            background: white;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .set-btn.completed {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+        
+        .set-btn.failed {
+            background: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+        
+        .exercise-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .timer {
+            background: #343a40;
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .timer.active {
+            display: block;
+        }
+        
+        .timer-display {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .body-weight-input {
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .body-weight-input input {
+            background: transparent;
+            border: none;
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+            width: 80px;
+            color: #1976d2;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .chart-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+        
+        .history-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .history-date {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .history-exercises {
+            font-size: 14px;
+            color: #6c757d;
+        }
+        
+        .calendar-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .calendar-nav-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s ease;
+        }
+        
+        .calendar-nav-btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .calendar-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #667eea;
+        }
+        
+        .calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            margin-bottom: 10px;
+        }
+        
+        .weekday {
+            padding: 10px;
+            text-align: center;
+            font-weight: 600;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background: #dee2e6;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .calendar-day {
+            background: white;
+            padding: 12px 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            min-height: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .calendar-day:hover {
+            background: #f8f9fa;
+        }
+        
+        .calendar-day.other-month {
+            color: #adb5bd;
+            background: #f8f9fa;
+        }
+        
+        .calendar-day.today {
+            background: #667eea;
+            color: white;
+            font-weight: 700;
+        }
+        
+        .calendar-day.workout-a {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+        
+        .calendar-day.workout-b {
+            background: linear-gradient(135deg, #007bff, #6610f2);
+            color: white;
+        }
+        
+        .calendar-day.completed {
+            background: linear-gradient(135deg, #ffc107, #fd7e14);
+            color: white;
+        }
+        
+        .calendar-day.completed::after {
+            content: '✓';
+            position: absolute;
+            top: 2px;
+            right: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .calendar-day-number {
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        
+        .calendar-day-workout {
+            font-size: 10px;
+            opacity: 0.9;
+        }
+        
+        .calendar-legend {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        
+        .legend-color.workout-a {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+        
+        .legend-color.workout-b {
+            background: linear-gradient(135deg, #007bff, #6610f2);
+        }
+        
+        .legend-color.completed {
+            background: linear-gradient(135deg, #ffc107, #fd7e14);
+        }
+        
+        .legend-color.today {
+            background: #667eea;
+        }
+        
+        .sync-status {
+            background: rgba(255,255,255,0.1);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        .sync-status.syncing {
+            color: #ffc107;
+        }
+        
+        .sync-status.synced {
+            color: #28a745;
+        }
+        
+        .sync-status.error {
+            color: #dc3545;
+        }
+        
+        @media (max-width: 480px) {
+            .content {
+                padding: 15px;
+            }
+            
+            .exercise-controls {
+                flex-direction: column;
+            }
+            
+            .exercise-controls .btn {
+                margin-bottom: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Authentication Screen -->
+    <div class="auth-screen" id="auth-screen">
+        <div class="auth-logo">💪</div>
+        <h1 class="auth-title">StrongLifts 5x5</h1>
+        <p class="auth-subtitle">Track your workouts across all devices</p>
+        <button class="google-signin-btn" id="google-signin-btn">
+            <svg class="google-logo" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Continue with Google
+        </button>
+    </div>
+
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loading-screen">
+        <div class="spinner"></div>
+        <p>Loading your data...</p>
+    </div>
+
+    <!-- Main App -->
+    <div class="container app-content" id="app-content">
+        <div class="header">
+            <h1>StrongLifts 5x5</h1>
+            <div class="subtitle">Workout Tracker</div>
+            <div class="user-info" id="user-info">
+                <div class="user-details">
+                    <img class="user-avatar" id="user-avatar" src="" alt="User">
+                    <span class="user-name" id="user-name"></span>
+                </div>
+                <button class="logout-btn" onclick="signOut()">Logout</button>
+            </div>
+            <div class="sync-status" id="sync-status">
+                ✓ Data synced
+            </div>
+        </div>
+        
+        <div class="nav">
+            <button class="nav-btn active" onclick="showSection('workout')">Workout</button>
+            <button class="nav-btn" onclick="showSection('calendar')">Calendar</button>
+            <button class="nav-btn" onclick="showSection('history')">History</button>
+            <button class="nav-btn" onclick="showSection('setup')">Setup</button>
+        </div>
+        
+        <div class="content">
+            <!-- Setup Section -->
+            <div id="setup" class="section">
+                <div class="setup-form">
+                    <h3 style="margin-bottom: 15px; color: #667eea;">Initial Setup</h3>
+                    <div class="form-group">
+                        <label>Starting Squat Weight (lbs)</label>
+                        <input type="number" id="squat-start" placeholder="135" value="135">
+                    </div>
+                    <div class="form-group">
+                        <label>Starting Bench Press Weight (lbs)</label>
+                        <input type="number" id="bench-start" placeholder="95" value="95">
+                    </div>
+                    <div class="form-group">
+                        <label>Starting Barbell Row Weight (lbs)</label>
+                        <input type="number" id="row-start" placeholder="65" value="65">
+                    </div>
+                    <div class="form-group">
+                        <label>Starting Overhead Press Weight (lbs)</label>
+                        <input type="number" id="press-start" placeholder="45" value="45">
+                    </div>
+                    <div class="form-group">
+                        <label>Starting Deadlift Weight (lbs)</label>
+                        <input type="number" id="deadlift-start" placeholder="95" value="95">
+                    </div>
+                    <button class="btn" onclick="saveSetup()">Save Setup</button>
+                </div>
+                
+                <div class="setup-form">
+                    <h3 style="margin-bottom: 15px; color: #667eea;">Reset Progress</h3>
+                    <p style="margin-bottom: 15px; color: #6c757d;">This will reset all your progress and start fresh.</p>
+                    <button class="btn btn-danger" onclick="resetProgress()">Reset All Data</button>
+                </div>
+            </div>
+            
+            <!-- Calendar Section -->
+            <div id="calendar" class="section">
+                <div class="calendar-container">
+                    <div class="calendar-header">
+                        <button class="calendar-nav-btn" onclick="changeMonth(-1)">‹</button>
+                        <div class="calendar-title" id="calendar-title">January 2025</div>
+                        <button class="calendar-nav-btn" onclick="changeMonth(1)">›</button>
+                    </div>
+                    <div class="calendar-weekdays">
+                        <div class="weekday">Sun</div>
+                        <div class="weekday">Mon</div>
+                        <div class="weekday">Tue</div>
+                        <div class="weekday">Wed</div>
+                        <div class="weekday">Thu</div>
+                        <div class="weekday">Fri</div>
+                        <div class="weekday">Sat</div>
+                    </div>
+                    <div class="calendar-grid" id="calendar-grid">
+                        <!-- Calendar days will be generated here -->
+                    </div>
+                </div>
+                
+                <div class="calendar-legend">
+                    <div class="legend-item">
+                        <div class="legend-color workout-a"></div>
+                        <span>Workout A (Squat, Bench, Row)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color workout-b"></div>
+                        <span>Workout B (Squat, Press, Deadlift)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color completed"></div>
+                        <span>Completed Workout</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color today"></div>
+                        <span>Today</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Workout Section -->
+            <div id="workout" class="section active">
+                <div class="body-weight-input">
+                    <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #1976d2;">Today's Body Weight:</label>
+                    <input type="number" id="body-weight" placeholder="180" step="0.1"> lbs
+                </div>
+                
+                <div class="timer" id="rest-timer">
+                    <div class="timer-display" id="timer-display">3:00</div>
+                    <div>Rest Time</div>
+                    <button class="btn btn-secondary" onclick="stopTimer()" style="margin-top: 10px; width: auto; padding: 8px 16px;">Stop Timer</button>
+                </div>
+                
+                <div id="workout-days-container">
+                    <!-- Workout days will be generated here -->
+                </div>
+                
+                <button class="btn btn-success" onclick="completeWorkout()" id="complete-workout-btn" style="display: none;">Complete Workout</button>
+            </div>
+            
+            <!-- History Section -->
+            <div id="history" class="section">
+                <div class="chart-container">
+                    <div class="chart-title">Weight Progress</div>
+                    <canvas id="progress-chart" width="400" height="200"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-title">Body Weight Progress</div>
+                    <canvas id="bodyweight-chart" width="400" height="200"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-title">Workout History</div>
+                    <div id="workout-history">
+                        <!-- History items will be generated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as firebaseSignOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        // Firebase configuration - YOU NEED TO REPLACE THIS WITH YOUR OWN CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyCXsb3vieMVE1R5BNF-VxhJxIvLzdscX8w",
+            authDomain: "stronglifts-tracker.firebaseapp.com",
+            projectId: "stronglifts-tracker",
+            storageBucket: "stronglifts-tracker.firebasestorage.app",
+            messagingSenderId: "114010387631",
+            appId: "1:114010387631:web:030012253ec9ed78f5d05a"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        // Global variables
+        let currentUser = null;
+        let unsubscribeListener = null;
+
+        // App data structure
+        let appData = {
+            exercises: {
+                squat: { name: 'Squat', weight: 135, failed: 0 },
+                bench: { name: 'Bench Press', weight: 95, failed: 0 },
+                row: { name: 'Barbell Row', weight: 65, failed: 0 },
+                press: { name: 'Overhead Press', weight: 45, failed: 0 },
+                deadlift: { name: 'Deadlift', weight: 95, failed: 0 }
+            },
+            workoutDays: {
+                A: ['squat', 'bench', 'row'],
+                B: ['squat', 'press', 'deadlift']
+            },
+            currentDay: 'A',
+            workoutHistory: [],
+            currentWorkout: null,
+            timerInterval: null,
+            timerSeconds: 0,
+            currentCalendarDate: new Date(),
+            workoutSchedule: {},
+            startDate: new Date()
+        };
+
+        // Make functions globally available
+        window.signOut = signOut;
+        window.showSection = showSection;
+        window.saveSetup = saveSetup;
+        window.resetProgress = resetProgress;
+        window.updateWorkoutDisplay = updateWorkoutDisplay;
+        window.switchToDay = switchToDay;
+        window.toggleSet = toggleSet;
+        window.completeExercise = completeExercise;
+        window.failExercise = failExercise;
+        window.completeWorkout = completeWorkout;
+        window.startTimer = startTimer;
+        window.stopTimer = stopTimer;
+        window.updateHistoryDisplay = updateHistoryDisplay;
+        window.updateCalendarDisplay = updateCalendarDisplay;
+        window.changeMonth = changeMonth;
+
+        // Authentication functions
+        function showAuthScreen() {
+            document.getElementById('auth-screen').classList.remove('hidden');
+            document.getElementById('loading-screen').classList.remove('visible');
+            document.getElementById('app-content').classList.remove('visible');
+        }
+
+        function showLoadingScreen() {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('loading-screen').classList.add('visible');
+            document.getElementById('app-content').classList.remove('visible');
+        }
+
+        function showAppContent() {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('loading-screen').classList.remove('visible');
+            document.getElementById('app-content').classList.add('visible');
+        }
+
+        function updateSyncStatus(status, message) {
+            const syncElement = document.getElementById('sync-status');
+            syncElement.className = `sync-status ${status}`;
+            
+            switch(status) {
+                case 'syncing':
+                    syncElement.textContent = '⏳ Syncing...';
+                    break;
+                case 'synced':
+                    syncElement.textContent = '✓ Data synced';
+                    break;
+                case 'error':
+                    syncElement.textContent = '⚠ Sync error';
+                    break;
+            }
+        }
+
+        // Google Sign In
+        async function signInWithGoogle() {
+            try {
+                showLoadingScreen();
+                const result = await signInWithPopup(auth, provider);
+                currentUser = result.user;
+                console.log('User signed in:', currentUser.displayName);
+            } catch (error) {
+                console.error('Sign in error:', error);
+                showAuthScreen();
+                alert('Sign in failed. Please try again.');
+            }
+        }
+
+        // Sign Out
+        async function signOut() {
+            try {
+                if (unsubscribeListener) {
+                    unsubscribeListener();
+                }
+                await firebaseSignOut(auth);
+                currentUser = null;
+                showAuthScreen();
+            } catch (error) {
+                console.error('Sign out error:', error);
+            }
+        }
+
+        // Data management functions
+        async function saveDataToFirebase() {
+            if (!currentUser) return;
+            
+            try {
+                updateSyncStatus('syncing');
+                const userDocRef = doc(db, 'users', currentUser.uid);
+                await setDoc(userDocRef, {
+                    ...appData,
+                    lastUpdated: new Date().toISOString()
+                }, { merge: true });
+                updateSyncStatus('synced');
+            } catch (error) {
+                console.error('Error saving data:', error);
+                updateSyncStatus('error');
+            }
+        }
+
+        async function loadDataFromFirebase() {
+            if (!currentUser) return;
+            
+            try {
+                const userDocRef = doc(db, 'users', currentUser.uid);
+                const docSnap = await getDoc(userDocRef);
+                
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    // Merge saved data with defaults
+                    appData = {
+                        ...appData,
+                        ...data,
+                        timerInterval: null,
+                        timerSeconds: 0,
+                        currentCalendarDate: new Date(data.currentCalendarDate || new Date()),
+                        startDate: new Date(data.startDate || new Date())
+                    };
+                    console.log('Data loaded from Firebase');
+                } else {
+                    // First time user - save default data
+                    await saveDataToFirebase();
+                    console.log('New user - default data saved');
+                }
+                
+                updateWorkoutDisplay();
+                updateHistoryDisplay();
+                updateCalendarDisplay();
+                showAppContent();
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showAppContent(); // Show app even if loading fails
+            }
+        }
+
+        function setupRealtimeListener() {
+            if (!currentUser) return;
+            
+            const userDocRef = doc(db, 'users', currentUser.uid);
+            unsubscribeListener = onSnapshot(userDocRef, (doc) => {
+                if (doc.exists()) {
+                    const data = doc.data();
+                    // Only update if the data is newer than our current data
+                    if (data.lastUpdated !== appData.lastUpdated) {
+                        appData = {
+                            ...appData,
+                            ...data,
+                            timerInterval: null,
+                            timerSeconds: 0,
+                            currentCalendarDate: new Date(data.currentCalendarDate || new Date()),
+                            startDate: new Date(data.startDate || new Date())
+                        };
+                        updateWorkoutDisplay();
+                        updateHistoryDisplay();
+                        updateCalendarDisplay();
+                        updateSyncStatus('synced');
+                    }
+                }
+            });
+        }
+
+        // Authentication state observer
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                // Update user info in header
+                document.getElementById('user-name').textContent = user.displayName;
+                document.getElementById('user-avatar').src = user.photoURL;
+                document.getElementById('user-info').classList.add('visible');
+                
+                loadDataFromFirebase();
+                setupRealtimeListener();
+            } else {
+                currentUser = null;
+                showAuthScreen();
+            }
+        });
+
+        // App functions (same as before but with Firebase sync)
+        function showSection(section) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(section).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (section === 'setup') {
+                loadSetupForm();
+            } else if (section === 'history') {
+                updateHistoryDisplay();
+            } else if (section === 'calendar') {
+                updateCalendarDisplay();
+            }
+        }
+
+        function loadSetupForm() {
+            document.getElementById('squat-start').value = appData.exercises.squat.weight;
+            document.getElementById('bench-start').value = appData.exercises.bench.weight;
+            document.getElementById('row-start').value = appData.exercises.row.weight;
+            document.getElementById('press-start').value = appData.exercises.press.weight;
+            document.getElementById('deadlift-start').value = appData.exercises.deadlift.weight;
+        }
+
+        async function saveSetup() {
+            appData.exercises.squat.weight = parseInt(document.getElementById('squat-start').value) || 135;
+            appData.exercises.bench.weight = parseInt(document.getElementById('bench-start').value) || 95;
+            appData.exercises.row.weight = parseInt(document.getElementById('row-start').value) || 65;
+            appData.exercises.press.weight = parseInt(document.getElementById('press-start').value) || 45;
+            appData.exercises.deadlift.weight = parseInt(document.getElementById('deadlift-start').value) || 95;
+            
+            await saveDataToFirebase();
+            updateWorkoutDisplay();
+            alert('Setup saved successfully!');
+        }
+
+        async function resetProgress() {
+            if (confirm('Are you sure you want to reset all progress? This cannot be undone.')) {
+                appData = {
+                    exercises: {
+                        squat: { name: 'Squat', weight: 135, failed: 0 },
+                        bench: { name: 'Bench Press', weight: 95, failed: 0 },
+                        row: { name: 'Barbell Row', weight: 65, failed: 0 },
+                        press: { name: 'Overhead Press', weight: 45, failed: 0 },
+                        deadlift: { name: 'Deadlift', weight: 95, failed: 0 }
+                    },
+                    workoutDays: {
+                        A: ['squat', 'bench', 'row'],
+                        B: ['squat', 'press', 'deadlift']
+                    },
+                    currentDay: 'A',
+                    workoutHistory: [],
+                    currentWorkout: null,
+                    timerInterval: null,
+                    timerSeconds: 0,
+                    currentCalendarDate: new Date(),
+                    workoutSchedule: {},
+                    startDate: new Date()
+                };
+                await saveDataToFirebase();
+                updateWorkoutDisplay();
+                updateHistoryDisplay();
+                updateCalendarDisplay();
+                alert('All data has been reset!');
+            }
+        }
+
+        function updateWorkoutDisplay() {
+            const container = document.getElementById('workout-days-container');
+            container.innerHTML = '';
+            
+            ['A', 'B'].forEach(day => {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = `workout-day ${day === appData.currentDay ? 'active-day' : ''}`;
+                
+                const exercises = appData.workoutDays[day].map(ex => appData.exercises[ex].name).join(', ');
+                
+                dayDiv.innerHTML = `
+                    <div class="day-header">
+                        <div class="day-title">Workout ${day}</div>
+                        <div class="day-exercises">${exercises}</div>
+                    </div>
+                    ${day === appData.currentDay ? generateExerciseBlocks(day) : ''}
+                `;
+                
+                if (day !== appData.currentDay) {
+                    dayDiv.style.cursor = 'pointer';
+                    dayDiv.onclick = () => switchToDay(day);
+                }
+                
+                container.appendChild(dayDiv);
+            });
+        }
+
+        function generateExerciseBlocks(day) {
+            return appData.workoutDays[day].map(exerciseKey => {
+                const exercise = appData.exercises[exerciseKey];
+                const reps = exerciseKey === 'deadlift' ? '1x5' : '5x5';
+                const setCount = exerciseKey === 'deadlift' ? 1 : 5;
+                
+                let setsHtml = '';
+                for (let i = 0; i < setCount; i++) {
+                    setsHtml += `<button class="set-btn" onclick="toggleSet('${exerciseKey}', ${i})" id="set-${exerciseKey}-${i}">5</button>`;
+                }
+                
+                return `
+                    <div class="exercise-block">
+                        <div class="exercise-header">
+                            <div class="exercise-name">${exercise.name} ${reps}</div>
+                            <div class="exercise-weight">${exercise.weight} lbs</div>
+                        </div>
+                        <div class="sets-container">
+                            ${setsHtml}
+                        </div>
+                        <div class="exercise-controls">
+                            <button class="btn btn-success" onclick="completeExercise('${exerciseKey}')">Complete All Sets</button>
+                            <button class="btn btn-danger" onclick="failExercise('${exerciseKey}')">Failed Set</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function switchToDay(day) {
+            appData.currentDay = day;
+            updateWorkoutDisplay();
+            await saveDataToFirebase();
+        }
+
+        function toggleSet(exerciseKey, setIndex) {
+            const setBtn = document.getElementById(`set-${exerciseKey}-${setIndex}`);
+            
+            if (setBtn.classList.contains('completed')) {
+                setBtn.classList.remove('completed');
+                setBtn.textContent = '5';
+            } else if (setBtn.classList.contains('failed')) {
+                setBtn.classList.remove('failed');
+                setBtn.classList.add('completed');
+                setBtn.textContent = '✓';
+            } else {
+                setBtn.classList.add('completed');
+                setBtn.textContent = '✓';
+            }
+            
+            checkWorkoutCompletion();
+        }
+
+        async function completeExercise(exerciseKey) {
+            const exercise = appData.exercises[exerciseKey];
+            const setCount = exerciseKey === 'deadlift' ? 1 : 5;
+            
+            for (let i = 0; i < setCount; i++) {
+                const setBtn = document.getElementById(`set-${exerciseKey}-${i}`);
+                setBtn.classList.remove('failed');
+                setBtn.classList.add('completed');
+                setBtn.textContent = '✓';
+            }
+            
+            // Progress weight
+            if (exerciseKey === 'squat' || exerciseKey === 'deadlift') {
+                exercise.weight += 10;
+            } else {
+                exercise.weight += 5;
+            }
+            
+            exercise.failed = 0;
+            updateWorkoutDisplay();
+            await saveDataToFirebase();
+            checkWorkoutCompletion();
+            
+            // Start rest timer
+            startTimer(90);
+        }
+
+        async function failExercise(exerciseKey) {
+            const exercise = appData.exercises[exerciseKey];
+            exercise.failed++;
+            
+            const setCount = exerciseKey === 'deadlift' ? 1 : 5;
+            const lastSetBtn = document.getElementById(`set-${exerciseKey}-${setCount - 1}`);
+            lastSetBtn.classList.remove('completed');
+            lastSetBtn.classList.add('failed');
+            lastSetBtn.textContent = 'X';
+            
+            if (exercise.failed >= 3) {
+                exercise.weight = Math.max(45, Math.round(exercise.weight * 0.9));
+                exercise.failed = 0;
+                alert(`${exercise.name} deloaded to ${exercise.weight} lbs`);
+            }
+            
+            updateWorkoutDisplay();
+            await saveDataToFirebase();
+            checkWorkoutCompletion();
+            
+            startTimer(180);
+        }
+
+        function checkWorkoutCompletion() {
+            const currentExercises = appData.workoutDays[appData.currentDay];
+            let allCompleted = true;
+            
+            currentExercises.forEach(exerciseKey => {
+                const setCount = exerciseKey === 'deadlift' ? 1 : 5;
+                for (let i = 0; i < setCount; i++) {
+                    const setBtn = document.getElementById(`set-${exerciseKey}-${i}`);
+                    if (!setBtn.classList.contains('completed') && !setBtn.classList.contains('failed')) {
+                        allCompleted = false;
+                    }
+                }
+            });
+            
+            const completeBtn = document.getElementById('complete-workout-btn');
+            completeBtn.style.display = allCompleted ? 'block' : 'none';
+        }
+
+        async function completeWorkout() {
+            const bodyWeight = parseFloat(document.getElementById('body-weight').value) || 0;
+            
+            const workoutData = {
+                date: new Date().toISOString().split('T')[0],
+                day: appData.currentDay,
+                bodyWeight: bodyWeight,
+                exercises: {}
+            };
+            
+            appData.workoutDays[appData.currentDay].forEach(exerciseKey => {
+                workoutData.exercises[exerciseKey] = {
+                    weight: appData.exercises[exerciseKey].weight,
+                    completed: true
+                };
+            });
+            
+            appData.workoutHistory.push(workoutData);
+            appData.currentDay = appData.currentDay === 'A' ? 'B' : 'A';
+            
+            await saveDataToFirebase();
+            updateWorkoutDisplay();
+            
+            alert('Workout completed! Great job! 💪');
+            document.getElementById('body-weight').value = '';
+        }
+
+        // Timer functions
+        function startTimer(seconds) {
+            stopTimer();
+            
+            appData.timerSeconds = seconds;
+            const timer = document.getElementById('rest-timer');
+            timer.classList.add('active');
+            
+            updateTimerDisplay();
+            
+            appData.timerInterval = setInterval(() => {
+                appData.timerSeconds--;
+                updateTimerDisplay();
+                
+                if (appData.timerSeconds <= 0) {
+                    stopTimer();
+                    alert('Rest period complete! 🔔');
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(appData.timerSeconds / 60);
+            const seconds = appData.timerSeconds % 60;
+            document.getElementById('timer-display').textContent = 
+                `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function stopTimer() {
+            if (appData.timerInterval) {
+                clearInterval(appData.timerInterval);
+                appData.timerInterval = null;
+            }
+            document.getElementById('rest-timer').classList.remove('active');
+        }
+
+        // History functions
+        function updateHistoryDisplay() {
+            updateProgressChart();
+            updateBodyweightChart();
+            updateWorkoutHistory();
+        }
+
+        function updateProgressChart() {
+            const canvas = document.getElementById('progress-chart');
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#667eea';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Progress Chart Coming Soon!', canvas.width/2, canvas.height/2);
+            ctx.fillText('Complete more workouts to see your progress', canvas.width/2, canvas.height/2 + 30);
+        }
+
+        function updateBodyweightChart() {
+            const canvas = document.getElementById('bodyweight-chart');
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (appData.workoutHistory.length === 0) {
+                ctx.fillStyle = '#667eea';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Body Weight Chart Coming Soon!', canvas.width/2, canvas.height/2);
+                ctx.fillText('Log body weight during workouts to track progress', canvas.width/2, canvas.height/2 + 30);
+                return;
+            }
+            
+            const weights = appData.workoutHistory.filter(w => w.bodyWeight > 0).map(w => w.bodyWeight);
+            if (weights.length < 2) return;
+            
+            const minWeight = Math.min(...weights) - 5;
+            const maxWeight = Math.max(...weights) + 5;
+            const range = maxWeight - minWeight;
+            
+            ctx.strokeStyle = '#28a745';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            weights.forEach((weight, index) => {
+                const x = (index / (weights.length - 1)) * (canvas.width - 40) + 20;
+                const y = canvas.height - 20 - ((weight - minWeight) / range) * (canvas.height - 40);
+                
+                if (index === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+                
+                ctx.fillStyle = '#28a745';
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+            
+            ctx.stroke();
+        }
+
+        function updateWorkoutHistory() {
+            const container = document.getElementById('workout-history');
+            
+            if (appData.workoutHistory.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 20px;">No workouts completed yet. Start your first workout!</p>';
+                return;
+            }
+            
+            container.innerHTML = appData.workoutHistory
+                .slice(-10)
+                .reverse()
+                .map(workout => {
+                    const exercisesList = Object.keys(workout.exercises)
+                        .map(key => `${appData.exercises[key].name}: ${workout.exercises[key].weight}lbs`)
+                        .join(', ');
+                    
+                    return `
+                        <div class="history-item">
+                            <div class="history-date">${new Date(workout.date).toLocaleDateString()} - Workout ${workout.day}</div>
+                            <div class="history-exercises">${exercisesList}</div>
+                            ${workout.bodyWeight ? `<div style="font-size: 12px; color: #6c757d; margin-top: 5px;">Body Weight: ${workout.bodyWeight} lbs</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+        }
+
+        // Calendar functions
+        function updateCalendarDisplay() {
+            updateCalendarHeader();
+            generateCalendarGrid();
+        }
+
+        function updateCalendarHeader() {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                               'July', 'August', 'September', 'October', 'November', 'December'];
+            const title = `${monthNames[appData.currentCalendarDate.getMonth()]} ${appData.currentCalendarDate.getFullYear()}`;
+            document.getElementById('calendar-title').textContent = title;
+        }
+
+        function changeMonth(direction) {
+            appData.currentCalendarDate.setMonth(appData.currentCalendarDate.getMonth() + direction);
+            updateCalendarDisplay();
+        }
+
+        function generateCalendarGrid() {
+            const grid = document.getElementById('calendar-grid');
+            const year = appData.currentCalendarDate.getFullYear();
+            const month = appData.currentCalendarDate.getMonth();
+            
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startDay = firstDay.getDay();
+            
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+            
+            grid.innerHTML = '';
+            
+            for (let i = 0; i < startDay; i++) {
+                const prevMonth = new Date(year, month, 0 - (startDay - 1 - i));
+                const dayDiv = createCalendarDay(prevMonth, true);
+                grid.appendChild(dayDiv);
+            }
+            
+            for (let day = 1; day <= daysInMonth; day++) {
+                const currentDate = new Date(year, month, day);
+                const dayDiv = createCalendarDay(currentDate, false);
+                grid.appendChild(dayDiv);
+            }
+            
+            const totalCells = grid.children.length;
+            const remainingCells = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+            for (let i = 1; i <= remainingCells; i++) {
+                const nextMonth = new Date(year, month + 1, i);
+                const dayDiv = createCalendarDay(nextMonth, true);
+                grid.appendChild(dayDiv);
+            }
+        }
+
+        function createCalendarDay(date, isOtherMonth) {
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'calendar-day';
+            
+            const dateStr = date.toISOString().split('T')[0];
+            const today = new Date().toISOString().split('T')[0];
+            const dayNumber = date.getDate();
+            
+            const workoutType = getWorkoutForDate(date);
+            const isCompleted = appData.workoutHistory.some(w => w.date === dateStr);
+            
+            if (isOtherMonth) {
+                dayDiv.classList.add('other-month');
+            } else if (dateStr === today) {
+                dayDiv.classList.add('today');
+            } else if (isCompleted) {
+                dayDiv.classList.add('completed');
+            } else if (workoutType && !isOtherMonth) {
+                dayDiv.classList.add(`workout-${workoutType.toLowerCase()}`);
+            }
+            
+            dayDiv.innerHTML = `
+                <div class="calendar-day-number">${dayNumber}</div>
+                ${workoutType && !isOtherMonth ? `<div class="calendar-day-workout">${workoutType}</div>` : ''}
+            `;
+            
+            if (!isOtherMonth && workoutType) {
+                dayDiv.style.cursor = 'pointer';
+                dayDiv.onclick = () => selectWorkoutDate(date, workoutType);
+            }
+            
+            return dayDiv;
+        }
+
+        function getWorkoutForDate(date) {
+            const startDate = appData.startDate;
+            const dayOfWeek = date.getDay();
+            if (dayOfWeek === 0 || dayOfWeek === 6) return null;
+            
+            let workoutNumber = 0;
+            let currentDate = new Date(startDate);
+            
+            while (currentDate <= date) {
+                const dow = currentDate.getDay();
+                if (dow !== 0 && dow !== 6 && currentDate.toDateString() === date.toDateString()) {
+                    return workoutNumber % 2 === 0 ? 'A' : 'B';
+                }
+                if (dow !== 0 && dow !== 6) {
+                    workoutNumber++;
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            
+            return null;
+        }
+
+        function selectWorkoutDate(date, workoutType) {
+            const dateStr = date.toISOString().split('T')[0];
+            const today = new Date().toISOString().split('T')[0];
+            
+            if (dateStr === today) {
+                appData.currentDay = workoutType;
+                showSection('workout');
+                updateWorkoutDisplay();
+            } else {
+                alert(`${date.toLocaleDateString()}: Workout ${workoutType}\n\nThis is your scheduled workout for this date. Come back on this day to log your workout!`);
+            }
+        }
+
+        // Initialize Google Sign In
+        document.getElementById('google-signin-btn').addEventListener('click', signInWithGoogle);
+
+        // Show auth screen initially
+        showAuthScreen();
+    </script>
+</body>
+</html>

@@ -1300,22 +1300,48 @@
             const exercise = appData.exercises[exerciseKey];
             const setCount = exerciseKey === 'deadlift' ? 1 : 5;
             
+            // Mark all sets as completed (green) immediately for instant visual feedback
             for (let i = 0; i < setCount; i++) {
                 const setBtn = document.getElementById(`set-${exerciseKey}-${i}`);
-                setBtn.classList.remove('failed');
-                setBtn.classList.add('completed');
-                setBtn.textContent = '✓';
+                if (setBtn) {
+                    setBtn.classList.remove('failed');
+                    setBtn.classList.add('completed');
+                    setBtn.textContent = '✓';
+                    
+                    // Add a small animation effect
+                    setBtn.style.transform = 'scale(1.1)';
+                    setTimeout(() => {
+                        setBtn.style.transform = 'scale(1)';
+                    }, 150);
+                }
             }
             
             // Progress weight
+            const oldWeight = exercise.weight;
             if (exerciseKey === 'squat' || exerciseKey === 'deadlift') {
                 exercise.weight += 10;
             } else {
                 exercise.weight += 5;
             }
             
+            // Update the weight display immediately
+            const weightDisplay = document.querySelector(`#set-${exerciseKey}-0`).closest('.exercise-block').querySelector('.exercise-weight');
+            if (weightDisplay) {
+                weightDisplay.textContent = `${exercise.weight} lbs`;
+                // Flash the new weight to show it updated
+                weightDisplay.style.background = '#28a745';
+                weightDisplay.style.color = 'white';
+                weightDisplay.style.borderRadius = '4px';
+                weightDisplay.style.padding = '2px 6px';
+                setTimeout(() => {
+                    weightDisplay.style.background = 'transparent';
+                    weightDisplay.style.color = '#667eea';
+                    weightDisplay.style.padding = '0';
+                }, 1000);
+            }
+            
             exercise.failed = 0;
-            updateWorkoutDisplay();
+            
             await saveDataToFirebase();
             checkWorkoutCompletion();
             

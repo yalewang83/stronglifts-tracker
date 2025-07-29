@@ -624,6 +624,10 @@
             background: #667eea;
         }
         
+        .legend-color.skipped {
+            background: linear-gradient(135deg, #6c757d, #495057);
+        }
+        
         .sync-status {
             background: rgba(255,255,255,0.1);
             padding: 8px 12px;
@@ -778,6 +782,10 @@
                         <span>Completed Workout</span>
                     </div>
                     <div class="legend-item">
+                        <div class="legend-color skipped"></div>
+                        <span>Skipped Workout</span>
+                    </div>
+                    <div class="legend-item">
                         <div class="legend-color today"></div>
                         <span>Today</span>
                     </div>
@@ -802,6 +810,10 @@
                 </div>
                 
                 <button class="btn btn-success" onclick="completeWorkout()" id="complete-workout-btn" style="display: none;">Complete Workout</button>
+                
+                <div style="margin-top: 15px;">
+                    <button class="btn btn-secondary" onclick="skipWorkoutDay()" id="skip-workout-btn">Skip Today's Workout</button>
+                </div>
             </div>
             
             <!-- History Section -->
@@ -826,24 +838,23 @@
         </div>
     </div>
 
+    <!-- Firebase Configuration -->
+    <script src="firebase-config.js"></script>
+    
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as firebaseSignOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-        // Firebase configuration - YOU NEED TO REPLACE THIS WITH YOUR OWN CONFIG
-        const firebaseConfig = {
-            apiKey: "AIzaSyCXsb3vieMVE1R5BNF-VxhJxIvLzdscX8w",
-            authDomain: "stronglifts-tracker.firebaseapp.com",
-            projectId: "stronglifts-tracker",
-            storageBucket: "stronglifts-tracker.firebasestorage.app",
-            messagingSenderId: "114010387631",
-            appId: "1:114010387631:web:030012253ec9ed78f5d05a"
-        };
+        // Wait for config to load, then initialize Firebase
+        if (!window.firebaseConfig) {
+            console.error('Firebase configuration not found! Make sure firebase-config.js is loaded.');
+            alert('Firebase configuration missing. Please check firebase-config.js file.');
+        }
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
+        // Initialize Firebase with config from external file
+        const app = initializeApp(window.firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
@@ -886,6 +897,7 @@
         window.completeExercise = completeExercise;
         window.failExercise = failExercise;
         window.completeWorkout = completeWorkout;
+        window.skipWorkoutDay = skipWorkoutDay;
         window.startTimer = startTimer;
         window.stopTimer = stopTimer;
         window.updateHistoryDisplay = updateHistoryDisplay;
@@ -1276,7 +1288,9 @@
                 date: new Date().toISOString().split('T')[0],
                 day: appData.currentDay,
                 bodyWeight: bodyWeight,
-                exercises: {}
+                exercises: {},
+                completed: true,
+                skipped: false
             };
             
             appData.workoutDays[appData.currentDay].forEach(exerciseKey => {
@@ -1291,9 +1305,42 @@
             
             await saveDataToFirebase();
             updateWorkoutDisplay();
+            updateCalendarDisplay();
             
             alert('Workout completed! Great job! 💪');
             document.getElementById('body-weight').value = '';
+        }
+
+        async function skipWorkoutDay() {
+            if (confirm('Are you sure you want to skip today\'s workout? This will be logged in your history.')) {
+                const workoutData = {
+                    date: new Date().toISOString().split('T')[0],
+                    day: appData.currentDay,
+                    bodyWeight: 0,
+                    exercises: {},
+                    completed: false,
+                    skipped: true
+                };
+                
+                // Log skipped exercises with current weights
+                appData.workoutDays[appData.currentDay].forEach(exerciseKey => {
+                    workoutData.exercises[exerciseKey] = {
+                        weight: appData.exercises[exerciseKey].weight,
+                        completed: false,
+                        skipped: true
+                    };
+                });
+                
+                appData.workoutHistory.push(workoutData);
+                appData.currentDay = appData.currentDay === 'A' ? 'B' : 'A';
+                
+                await saveDataToFirebase();
+                updateWorkoutDisplay();
+                updateCalendarDisplay();
+                
+                alert('Workout skipped and logged. Try to get back to it tomorrow! 💪');
+                document.getElementById('body-weight').value = '';
+            }
         }
 
         // Timer functions
@@ -1410,12 +1457,19 @@
                 .reverse()
                 .map(workout => {
                     const exercisesList = Object.keys(workout.exercises)
-                        .map(key => `${appData.exercises[key].name}: ${workout.exercises[key].weight}lbs`)
+                        .map(key => {
+                            const exercise = workout.exercises[key];
+                            const exerciseName = appData.exercises[key] ? appData.exercises[key].name : key;
+                            return `${exerciseName}: ${exercise.weight}lbs${exercise.skipped ? ' (skipped)' : ''}`;
+                        })
                         .join(', ');
                     
+                    const statusIcon = workout.skipped ? '⏭️' : (workout.completed ? '✅' : '❓');
+                    const statusText = workout.skipped ? 'Skipped' : (workout.completed ? 'Completed' : 'Partial');
+                    
                     return `
-                        <div class="history-item">
-                            <div class="history-date">${new Date(workout.date).toLocaleDateString()} - Workout ${workout.day}</div>
+                        <div class="history-item" style="${workout.skipped ? 'border-left-color: #6c757d; opacity: 0.8;' : ''}">
+                            <div class="history-date">${statusIcon} ${new Date(workout.date).toLocaleDateString()} - Workout ${workout.day} (${statusText})</div>
                             <div class="history-exercises">${exercisesList}</div>
                             ${workout.bodyWeight ? `<div style="font-size: 12px; color: #6c757d; margin-top: 5px;">Body Weight: ${workout.bodyWeight} lbs</div>` : ''}
                         </div>
@@ -1432,17 +1486,34 @@
         function updateCalendarHeader() {
             const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                                'July', 'August', 'September', 'October', 'November', 'December'];
+            
+            // Ensure currentCalendarDate is a valid Date object
+            if (!appData.currentCalendarDate || !(appData.currentCalendarDate instanceof Date) || isNaN(appData.currentCalendarDate)) {
+                appData.currentCalendarDate = new Date();
+            }
+            
             const title = `${monthNames[appData.currentCalendarDate.getMonth()]} ${appData.currentCalendarDate.getFullYear()}`;
             document.getElementById('calendar-title').textContent = title;
         }
 
         function changeMonth(direction) {
+            // Ensure currentCalendarDate is a valid Date object
+            if (!appData.currentCalendarDate || !(appData.currentCalendarDate instanceof Date) || isNaN(appData.currentCalendarDate)) {
+                appData.currentCalendarDate = new Date();
+            }
+            
             appData.currentCalendarDate.setMonth(appData.currentCalendarDate.getMonth() + direction);
             updateCalendarDisplay();
         }
 
         function generateCalendarGrid() {
             const grid = document.getElementById('calendar-grid');
+            
+            // Ensure currentCalendarDate is a valid Date object
+            if (!appData.currentCalendarDate || !(appData.currentCalendarDate instanceof Date) || isNaN(appData.currentCalendarDate)) {
+                appData.currentCalendarDate = new Date();
+            }
+            
             const year = appData.currentCalendarDate.getFullYear();
             const month = appData.currentCalendarDate.getMonth();
             
@@ -1486,7 +1557,9 @@
             const dayNumber = date.getDate();
             
             const workoutType = getWorkoutForDate(date);
-            const isCompleted = appData.workoutHistory.some(w => w.date === dateStr);
+            const workoutEntry = appData.workoutHistory.find(w => w.date === dateStr);
+            const isCompleted = workoutEntry && workoutEntry.completed;
+            const isSkipped = workoutEntry && workoutEntry.skipped;
             
             if (isOtherMonth) {
                 dayDiv.classList.add('other-month');
@@ -1494,13 +1567,26 @@
                 dayDiv.classList.add('today');
             } else if (isCompleted) {
                 dayDiv.classList.add('completed');
+            } else if (isSkipped) {
+                dayDiv.classList.add('skipped');
+                dayDiv.style.background = 'linear-gradient(135deg, #6c757d, #495057)';
+                dayDiv.style.color = 'white';
             } else if (workoutType && !isOtherMonth) {
                 dayDiv.classList.add(`workout-${workoutType.toLowerCase()}`);
             }
             
+            let workoutLabel = '';
+            if (isCompleted) {
+                workoutLabel = '✓';
+            } else if (isSkipped) {
+                workoutLabel = 'Skip';
+            } else if (workoutType) {
+                workoutLabel = workoutType;
+            }
+            
             dayDiv.innerHTML = `
                 <div class="calendar-day-number">${dayNumber}</div>
-                ${workoutType && !isOtherMonth ? `<div class="calendar-day-workout">${workoutType}</div>` : ''}
+                ${workoutLabel && !isOtherMonth ? `<div class="calendar-day-workout">${workoutLabel}</div>` : ''}
             `;
             
             if (!isOtherMonth && workoutType) {
@@ -1512,6 +1598,11 @@
         }
 
         function getWorkoutForDate(date) {
+            // Ensure startDate is a valid Date object
+            if (!appData.startDate || !(appData.startDate instanceof Date) || isNaN(appData.startDate)) {
+                appData.startDate = new Date();
+            }
+            
             const startDate = appData.startDate;
             const dayOfWeek = date.getDay();
             if (dayOfWeek === 0 || dayOfWeek === 6) return null;

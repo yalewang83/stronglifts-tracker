@@ -1158,6 +1158,11 @@
                 
                 container.appendChild(dayDiv);
             });
+            
+            // Always check for workout completion after updating display
+            setTimeout(() => {
+                checkWorkoutCompletion();
+            }, 100);
         }
 
         function generateExerciseBlocks(day) {
@@ -1266,37 +1271,93 @@
         function checkWorkoutCompletion() {
             const currentExercises = appData.workoutDays[appData.currentDay];
             let allCompleted = true;
+            let hasAnyProgress = false;
             
             currentExercises.forEach(exerciseKey => {
                 const setCount = exerciseKey === 'deadlift' ? 1 : 5;
+                let exerciseHasProgress = false;
+                
                 for (let i = 0; i < setCount; i++) {
                     const setBtn = document.getElementById(`set-${exerciseKey}-${i}`);
-                    if (!setBtn.classList.contains('completed') && !setBtn.classList.contains('failed')) {
-                        allCompleted = false;
+                    if (setBtn) {
+                        if (setBtn.classList.contains('completed') || setBtn.classList.contains('failed')) {
+                            exerciseHasProgress = true;
+                            hasAnyProgress = true;
+                        }
+                        if (!setBtn.classList.contains('completed') && !setBtn.classList.contains('failed')) {
+                            allCompleted = false;
+                        }
                     }
                 }
             });
             
             const completeBtn = document.getElementById('complete-workout-btn');
-            completeBtn.style.display = allCompleted ? 'block' : 'none';
+            if (completeBtn) {
+                // Show button if all exercises are completed OR if there's any progress made
+                completeBtn.style.display = (allCompleted || hasAnyProgress) ? 'block' : 'none';
+                
+                // Update button text based on completion status
+                if (allCompleted) {
+                    completeBtn.textContent = 'Complete Workout ✅';
+                    completeBtn.className = 'btn btn-success';
+                } else if (hasAnyProgress) {
+                    completeBtn.textContent = 'Finish Workout (Partial) ⚠️';
+                    completeBtn.className = 'btn' ; // Orange-ish color for partial
+                    completeBtn.style.background = 'linear-gradient(135deg, #fd7e14 0%, #ffc107 100%)';
+                }
+            }
         }
 
         async function completeWorkout() {
             const bodyWeight = parseFloat(document.getElementById('body-weight').value) || 0;
+            
+            // Check if workout is fully completed or partial
+            const currentExercises = appData.workoutDays[appData.currentDay];
+            let isFullyCompleted = true;
+            let completedSets = 0;
+            let totalSets = 0;
+            
+            currentExercises.forEach(exerciseKey => {
+                const setCount = exerciseKey === 'deadlift' ? 1 : 5;
+                totalSets += setCount;
+                
+                for (let i = 0; i < setCount; i++) {
+                    const setBtn = document.getElementById(`set-${exerciseKey}-${i}`);
+                    if (setBtn && (setBtn.classList.contains('completed') || setBtn.classList.contains('failed'))) {
+                        completedSets++;
+                    } else {
+                        isFullyCompleted = false;
+                    }
+                }
+            });
             
             const workoutData = {
                 date: new Date().toISOString().split('T')[0],
                 day: appData.currentDay,
                 bodyWeight: bodyWeight,
                 exercises: {},
-                completed: true,
-                skipped: false
+                completed: isFullyCompleted,
+                partial: !isFullyCompleted,
+                skipped: false,
+                completedSets: completedSets,
+                totalSets: totalSets
             };
             
             appData.workoutDays[appData.currentDay].forEach(exerciseKey => {
+                const setCount = exerciseKey === 'deadlift' ? 1 : 5;
+                let exerciseCompleted = true;
+                
+                for (let i = 0; i < setCount; i++) {
+                    const setBtn = document.getElementById(`set-${exerciseKey}-${i}`);
+                    if (!setBtn || (!setBtn.classList.contains('completed') && !setBtn.classList.contains('failed'))) {
+                        exerciseCompleted = false;
+                        break;
+                    }
+                }
+                
                 workoutData.exercises[exerciseKey] = {
                     weight: appData.exercises[exerciseKey].weight,
-                    completed: true
+                    completed: exerciseCompleted
                 };
             });
             
@@ -1307,7 +1368,12 @@
             updateWorkoutDisplay();
             updateCalendarDisplay();
             
-            alert('Workout completed! Great job! 💪');
+            if (isFullyCompleted) {
+                alert('Workout completed! Great job! 💪');
+            } else {
+                alert(`Partial workout logged! You completed ${completedSets}/${totalSets} sets. Better than nothing! 💪`);
+            }
+            
             document.getElementById('body-weight').value = '';
         }
 
@@ -1345,7 +1411,7 @@
 
         // Timer functions
         function startTimer(seconds) {
-            stopTimer();
+            stopTimer(); // Stop any existing timer
             
             appData.timerSeconds = seconds;
             const timer = document.getElementById('rest-timer');
@@ -1358,8 +1424,11 @@
                 updateTimerDisplay();
                 
                 if (appData.timerSeconds <= 0) {
-                    stopTimer();
-                    alert('Rest period complete! 🔔');
+                    stopTimer(); // Stop timer BEFORE showing alert
+                    // Use setTimeout to prevent the alert from interfering with timer cleanup
+                    setTimeout(() => {
+                        alert('Rest period complete! 🔔');
+                    }, 100);
                 }
             }, 1000);
         }
@@ -1367,8 +1436,10 @@
         function updateTimerDisplay() {
             const minutes = Math.floor(appData.timerSeconds / 60);
             const seconds = appData.timerSeconds % 60;
-            document.getElementById('timer-display').textContent = 
-                `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            const displayElement = document.getElementById('timer-display');
+            if (displayElement) {
+                displayElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
         }
 
         function stopTimer() {
@@ -1376,7 +1447,11 @@
                 clearInterval(appData.timerInterval);
                 appData.timerInterval = null;
             }
-            document.getElementById('rest-timer').classList.remove('active');
+            appData.timerSeconds = 0;
+            const timer = document.getElementById('rest-timer');
+            if (timer) {
+                timer.classList.remove('active');
+            }
         }
 
         // History functions

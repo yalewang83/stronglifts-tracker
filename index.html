@@ -1208,7 +1208,6 @@
                             ${setsHtml}
                         </div>
                         <div class="exercise-controls">
-                            <button class="btn btn-success" onclick="completeExercise('${exerciseKey}')">Complete All Sets</button>
                             <button class="btn btn-danger" onclick="failExercise('${exerciseKey}')">Failed Set</button>
                         </div>
                     </div>
@@ -1224,8 +1223,7 @@
                     <div class="workout-instructions">
                         <div class="instructions-title">Workout A Instructions</div>
                         <div class="instructions-text">
-                            Focus on proper form with controlled movements. Squat down until your hip crease is below your knee cap, then drive up through your heels. 
-                            Keep your chest up and core tight throughout all exercises.
+                            <strong>Squat:</strong> Feet shoulder-width apart, descend until hip crease is below knee cap, drive through heels. <strong>Bench Press:</strong> Lower bar to chest, press up explosively, keep shoulder blades pinched. <strong>Barbell Row:</strong> Bend at hips, pull bar to lower chest, squeeze shoulder blades together.
                         </div>
                     </div>
                 `;
@@ -1234,8 +1232,7 @@
                     <div class="workout-instructions">
                         <div class="instructions-title">Workout B Instructions</div>
                         <div class="instructions-text">
-                            Press the bar straight up overhead without arching your back excessively. For deadlifts, keep the bar close to your body and drive through your heels. 
-                            Remember: deadlifts are only 1 set of 5 reps, so make them count!
+                            <strong>Squat:</strong> Same form as Workout A - feet shoulder-width, descend below parallel, drive up through heels. <strong>Overhead Press:</strong> Press bar straight up from shoulders, don't arch back excessively, engage core. <strong>Deadlift:</strong> Bar over mid-foot, hinge at hips, keep bar close to body, drive through heels (only 1 set of 5!).
                         </div>
                     </div>
                 `;
@@ -1291,6 +1288,49 @@
             } else {
                 setBtn.classList.add('completed');
                 setBtn.textContent = '✓';
+                
+                // Check if all sets for this exercise are completed
+                const exercise = appData.exercises[exerciseKey];
+                const setCount = exerciseKey === 'deadlift' ? 1 : 5;
+                let allSetsCompleted = true;
+                
+                for (let i = 0; i < setCount; i++) {
+                    const checkBtn = document.getElementById(`set-${exerciseKey}-${i}`);
+                    if (!checkBtn || !checkBtn.classList.contains('completed')) {
+                        allSetsCompleted = false;
+                        break;
+                    }
+                }
+                
+                // If all sets completed, progress weight automatically
+                if (allSetsCompleted) {
+                    if (exerciseKey === 'squat' || exerciseKey === 'deadlift') {
+                        exercise.weight += 10;
+                    } else {
+                        exercise.weight += 5;
+                    }
+                    
+                    exercise.failed = 0;
+                    
+                    // Update weight display immediately
+                    const weightDisplay = setBtn.closest('.exercise-block').querySelector('.exercise-weight');
+                    if (weightDisplay) {
+                        weightDisplay.textContent = `${exercise.weight} lbs`;
+                        // Flash the new weight
+                        weightDisplay.style.background = '#28a745';
+                        weightDisplay.style.color = 'white';
+                        weightDisplay.style.borderRadius = '4px';
+                        weightDisplay.style.padding = '2px 6px';
+                        setTimeout(() => {
+                            weightDisplay.style.background = 'transparent';
+                            weightDisplay.style.color = '#667eea';
+                            weightDisplay.style.padding = '0';
+                        }, 1000);
+                    }
+                    
+                    saveDataToFirebase();
+                    startTimer(90); // Start rest timer when exercise completed
+                }
             }
             
             checkWorkoutCompletion();
@@ -1528,15 +1568,7 @@
                 updateTimerDisplay();
                 
                 if (appData.timerSeconds <= 0) {
-                    stopTimer(); // Stop timer BEFORE showing alert
-                    // Use a flag to prevent multiple alerts
-                    if (!appData.alertShown) {
-                        appData.alertShown = true;
-                        setTimeout(() => {
-                            alert('Rest period complete! 🔔');
-                            appData.alertShown = false; // Reset flag after alert
-                        }, 100);
-                    }
+                    stopTimer(); // Just stop timer, no alert
                 }
             }, 1000);
         }
@@ -1556,7 +1588,6 @@
                 appData.timerInterval = null;
             }
             appData.timerSeconds = 0;
-            appData.alertShown = false; // Reset alert flag
             const timer = document.getElementById('rest-timer');
             if (timer) {
                 timer.classList.remove('active');

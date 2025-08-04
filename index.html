@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -667,51 +668,6 @@
             color: #495057;
         }
         
-        .auth-error {
-            background: #f8d7da;
-            border: 2px solid #dc3545;
-            border-radius: 12px;
-            padding: 20px;
-            margin: 20px;
-            color: #721c24;
-            text-align: left;
-        }
-        
-        .auth-error-title {
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: #dc3545;
-        }
-        
-        .auth-error-text {
-            font-size: 14px;
-            line-height: 1.5;
-            margin-bottom: 15px;
-        }
-        
-        .auth-error-instructions {
-            font-size: 13px;
-            background: rgba(255,255,255,0.7);
-            padding: 10px;
-            border-radius: 6px;
-            margin-top: 10px;
-        }
-        
-        .retry-btn {
-            background: #dc3545;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            font-size: 14px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        
-        .retry-btn:hover {
-            background: #c82333;
-        }
-        
         @media (max-width: 480px) {
             .content {
                 padding: 15px;
@@ -742,14 +698,6 @@
             </svg>
             Continue with Google
         </button>
-        
-        <!-- Error display for authentication issues -->
-        <div class="auth-error" id="auth-error" style="display: none;">
-            <div class="auth-error-title">Sign-in Issue Detected</div>
-            <div class="auth-error-text" id="auth-error-message"></div>
-            <div class="auth-error-instructions" id="auth-error-instructions"></div>
-            <button class="retry-btn" onclick="retrySignIn()">Try Again</button>
-        </div>
     </div>
 
     <!-- Loading Screen -->
@@ -913,7 +861,6 @@
     <script src="firebase-config.js"></script>
     
     <!-- Firebase SDK -->
-    <!-- Version: 2.0 - Added iOS Safari compatibility and enhanced error handling for mobile browsers -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as firebaseSignOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -922,31 +869,18 @@
         // Wait for config to load, then initialize Firebase
         if (!window.firebaseConfig) {
             console.error('Firebase configuration not found! Make sure firebase-config.js is loaded.');
-            showAuthError('Configuration Error', 'Firebase configuration is missing. Please check your setup.', 'Contact the app administrator for assistance.');
-            return;
+            alert('Firebase configuration missing. Please check firebase-config.js file.');
         }
 
         // Initialize Firebase with config from external file
         const app = initializeApp(window.firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        
-        // Configure Google Auth Provider for mobile compatibility
         const provider = new GoogleAuthProvider();
-        provider.addScope('email');
-        provider.addScope('profile');
-        
-        // Set custom parameters for better mobile experience
-        provider.setCustomParameters({
-            prompt: 'select_account',
-            display: 'popup'
-        });
 
         // Global variables
         let currentUser = null;
         let unsubscribeListener = null;
-        let authRetryCount = 0;
-        const MAX_AUTH_RETRIES = 3;
 
         // App data structure
         let appData = {
@@ -989,14 +923,12 @@
         window.updateCalendarDisplay = updateCalendarDisplay;
         window.changeMonth = changeMonth;
         window.handleBodyWeightEnter = handleBodyWeightEnter;
-        window.retrySignIn = retrySignIn;
 
-        // Authentication functions with enhanced error handling
+        // Authentication functions
         function showAuthScreen() {
             document.getElementById('auth-screen').classList.remove('hidden');
             document.getElementById('loading-screen').classList.remove('visible');
             document.getElementById('app-content').classList.remove('visible');
-            document.getElementById('auth-error').style.display = 'none';
         }
 
         function showLoadingScreen() {
@@ -1009,140 +941,6 @@
             document.getElementById('auth-screen').classList.add('hidden');
             document.getElementById('loading-screen').classList.remove('visible');
             document.getElementById('app-content').classList.add('visible');
-        }
-
-        function showAuthError(title, message, instructions) {
-            document.getElementById('auth-error').style.display = 'block';
-            document.getElementById('auth-error-message').textContent = message;
-            document.getElementById('auth-error-instructions').textContent = instructions;
-            document.getElementById('google-signin-btn').style.display = 'none';
-            showAuthScreen();
-        }
-
-        function hideAuthError() {
-            document.getElementById('auth-error').style.display = 'none';
-            document.getElementById('google-signin-btn').style.display = 'flex';
-        }
-
-        function retrySignIn() {
-            authRetryCount = 0;
-            hideAuthError();
-            signInWithGoogle();
-        }
-
-        // Enhanced Google Sign In with mobile-friendly error handling  
-        async function signInWithGoogle() {
-            try {
-                showLoadingScreen();
-                
-                // Detect if we're on mobile for different auth strategies
-                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent);
-                
-                let result;
-                
-                if (isMobile) {
-                    // For mobile devices, try popup first, then redirect as fallback
-                    try {
-                        // Configure provider for mobile
-                        provider.setCustomParameters({
-                            prompt: 'select_account',
-                            display: 'popup'
-                        });
-                        
-                        result = await signInWithPopup(auth, provider);
-                    } catch (popupError) {
-                        console.log('Popup failed, trying redirect...', popupError);
-                        
-                        // If popup fails on mobile, provide user instructions
-                        if (popupError.code === 'auth/popup-blocked' || 
-                            popupError.code === 'auth/popup-closed-by-user' ||
-                            popupError.code === 'auth/cancelled-popup-request') {
-                            
-                            showAuthError(
-                                'Popup Blocked',
-                                'Your browser blocked the sign-in popup. This is common on mobile devices.',
-                                'Try: 1) Allow popups for this site, 2) Use Chrome or Firefox instead of Safari, 3) Disable private browsing mode.'
-                            );
-                            return;
-                        }
-                        
-                        throw popupError; // Re-throw other errors to be caught by outer try-catch
-                    }
-                } else {
-                    // For desktop, use popup method
-                    result = await signInWithPopup(auth, provider);
-                }
-                
-                currentUser = result.user;
-                authRetryCount = 0; // Reset retry count on success
-                console.log('User signed in successfully:', currentUser.displayName);
-                
-            } catch (error) {
-                console.error('Sign in error:', error);
-                authRetryCount++;
-                
-                // Handle specific Firebase Auth errors with user-friendly messages
-                let errorTitle = 'Sign-in Failed';
-                let errorMessage = 'Unable to sign in with Google.';
-                let errorInstructions = 'Please try again.';
-                
-                switch (error.code) {
-                    case 'auth/popup-blocked':
-                        errorTitle = 'Popup Blocked';
-                        errorMessage = 'Your browser blocked the sign-in popup.';
-                        errorInstructions = 'Please allow popups for this site and try again.';
-                        break;
-                        
-                    case 'auth/popup-closed-by-user':
-                        errorTitle = 'Sign-in Cancelled';
-                        errorMessage = 'The sign-in popup was closed before completing.';
-                        errorInstructions = 'Please try signing in again and complete the process.';
-                        break;
-                        
-                    case 'auth/network-request-failed':
-                        errorTitle = 'Network Error';
-                        errorMessage = 'Unable to connect to authentication servers.';
-                        errorInstructions = 'Check your internet connection and try again.';
-                        break;
-                        
-                    case 'auth/internal-error':
-                    case 'auth/invalid-api-key':
-                    case 'auth/app-not-authorized':
-                        errorTitle = 'Configuration Error';
-                        errorMessage = 'There\'s an issue with the app configuration.';
-                        errorInstructions = 'Please contact the app administrator for assistance.';
-                        break;
-                        
-                    case 'auth/unauthorized-domain':
-                        errorTitle = 'Domain Not Authorized';
-                        errorMessage = 'This domain is not authorized for Google sign-in.';
-                        errorInstructions = 'Please ensure you\'re accessing the app from the correct URL.';
-                        break;
-                        
-                    default:
-                        // Handle the specific iOS Safari "missing initial state" error
-                        if (error.message && error.message.includes('missing initial state')) {
-                            errorTitle = 'iOS Safari Compatibility Issue';
-                            errorMessage = 'Safari\'s privacy settings are preventing sign-in.';
-                            errorInstructions = 'Try: 1) Turn off Private Browsing, 2) Enable "Allow Cross-Website Tracking" in Safari Settings → Privacy, 3) Use Chrome app instead.';
-                        } else if (error.message && error.message.includes('sessionStorage')) {
-                            errorTitle = 'Browser Storage Issue';
-                            errorMessage = 'Your browser\'s privacy settings are too restrictive.';
-                            errorInstructions = 'Try: 1) Disable private browsing, 2) Enable cookies and site data, 3) Try a different browser.';
-                        } else {
-                            errorMessage = `Error: ${error.message || 'Unknown authentication error'}`;
-                            if (authRetryCount < MAX_AUTH_RETRIES) {
-                                errorInstructions = `Attempt ${authRetryCount}/${MAX_AUTH_RETRIES}. Please try again.`;
-                            } else {
-                                errorInstructions = 'Multiple attempts failed. Try: 1) Different browser, 2) Clear browser data, 3) Disable ad blockers.';
-                            }
-                        }
-                        break;
-                }
-                
-                showAuthError(errorTitle, errorMessage, errorInstructions);
-            }
         }
 
         function updateSyncStatus(status, message) {
@@ -1162,6 +960,20 @@
             }
         }
 
+        // Google Sign In
+        async function signInWithGoogle() {
+            try {
+                showLoadingScreen();
+                const result = await signInWithPopup(auth, provider);
+                currentUser = result.user;
+                console.log('User signed in:', currentUser.displayName);
+            } catch (error) {
+                console.error('Sign in error:', error);
+                showAuthScreen();
+                alert('Sign in failed. Please try again.');
+            }
+        }
+
         // Sign Out
         async function signOut() {
             try {
@@ -1170,7 +982,6 @@
                 }
                 await firebaseSignOut(auth);
                 currentUser = null;
-                authRetryCount = 0; // Reset retry count
                 showAuthScreen();
             } catch (error) {
                 console.error('Sign out error:', error);
